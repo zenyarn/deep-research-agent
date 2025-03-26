@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { logEnvStatus } from "@/lib/utils/env-validator";
-import { UserInputWrapper } from "@/components/core/UserInputWrapper";
+import { QnA } from "@/components/core/QnA";
 import { StoreDebugger } from "@/components/core/StoreDebugger";
 
 // 在服务器组件中执行环境变量检查
@@ -47,9 +47,9 @@ export default function Home() {
           </p>
         </div>
 
-        {/* 用户输入部分 */}
-        <div className="w-full max-w-3xl">
-          <UserInputWrapper />
+        {/* 问答组件部分 */}
+        <div className="w-full max-w-4xl">
+          <QnA />
         </div>
 
         {/* 特性描述 */}

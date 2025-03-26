@@ -85,6 +85,15 @@ export interface Report {
 }
 
 /**
+ * 研究状态类型 - 表示研究的当前阶段
+ */
+export type ResearchState =
+  | "idle" // 初始状态，未开始研究
+  | "researching" // 研究进行中
+  | "completed" // 研究已完成
+  | "error"; // 研究出错
+
+/**
  * 深度研究状态接口 - 表示整个研究过程的状态
  */
 export interface DeepResearchState {
@@ -98,6 +107,8 @@ export interface DeepResearchState {
   // 研究进度跟踪
   isCompleted: boolean; // 研究是否完成
   isLoading: boolean; // 是否正在加载
+  isResearching: boolean; // 是否正在进行研究
+  researchState: ResearchState; // 研究状态
 
   // 活动和来源跟踪
   activities: Activity[]; // 研究活动列表
@@ -115,6 +126,8 @@ export interface DeepResearchState {
   setCurrentQuestionIndex: (index: number) => void;
   setIsCompleted: (isCompleted: boolean) => void;
   setIsLoading: (isLoading: boolean) => void;
+  setResearchState: (state: ResearchState) => void; // 设置研究状态
+  startResearch: () => Promise<void>; // 开始研究过程
   addActivity: (activity: Omit<Activity, "id" | "timestamp">) => void;
   updateActivityStatus: (
     id: string,
