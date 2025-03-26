@@ -9,6 +9,8 @@ import { ResearchReport } from "./ResearchReport";
 import { useDeepResearchStore } from "@/lib/store/deepResearch";
 import { Button } from "@/components/ui/button";
 import { Loader2, PlayIcon } from "lucide-react";
+import { ResearchActivities as AdvancedResearchActivities } from "@/components/ui/deep-research/ResearchActivities";
+import { ResearchReport as AdvancedResearchReport } from "@/components/ui/deep-research/ResearchReport";
 
 export function QnA() {
   const {
@@ -66,7 +68,7 @@ export function QnA() {
 
       {/* 显示报告或问答流程 */}
       {report ? (
-        <ResearchReport />
+        <AdvancedResearchReport />
       ) : (
         <div
           className={`${
@@ -115,7 +117,7 @@ export function QnA() {
           {/* 研究活动和计时器 */}
           {isResearching && (
             <div className="lg:col-span-1 space-y-6">
-              <ResearchActivities />
+              <AdvancedResearchActivities />
               <ResearchTimer />
             </div>
           )}

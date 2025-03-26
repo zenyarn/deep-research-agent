@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { ResearchActivities } from "@/components/ui/deep-research/ResearchActivities";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,6 +19,7 @@ export default function RootLayout({
     <html lang="zh-CN" suppressHydrationWarning>
       <body className={inter.className}>
         <div className="min-h-screen flex flex-col">{children}</div>
+        <ResearchActivities />
       </body>
     </html>
   );
