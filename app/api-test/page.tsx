@@ -35,7 +35,17 @@ export default function APITest() {
       const data = await res.json();
       console.log("生成问题响应:", data);
 
-      if (data.questions && Array.isArray(data.questions)) {
+      // 处理不同的响应格式
+      if (Array.isArray(data)) {
+        // 直接返回的数组格式
+        setQuestions(
+          data.map((text, index) => ({
+            id: `q-${index}`,
+            text,
+          }))
+        );
+      } else if (data.questions && Array.isArray(data.questions)) {
+        // 包含questions字段的对象格式
         setQuestions(data.questions);
       } else {
         throw new Error("响应格式不正确");
@@ -60,6 +70,7 @@ export default function APITest() {
     setError(null);
 
     try {
+      console.log("开始深度研究:", topic, questions);
       const response = await fetch("/api/deep-research", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -76,53 +87,85 @@ export default function APITest() {
         throw new Error(`请求失败: ${response.status} ${response.statusText}`);
       }
 
+      console.log("研究API响应状态码:", response.status);
+      console.log(
+        "研究API响应头:",
+        Object.fromEntries(response.headers.entries())
+      );
+
+      // 确保响应是流式的
       const reader = response.body?.getReader();
       if (!reader) {
         throw new Error("无法获取响应流");
       }
 
       const decoder = new TextDecoder();
+      let buffer = "";
+
+      // 记录原始活动列表以便进行比较
+      let receivedActivities = [];
 
       while (true) {
         const { value, done } = await reader.read();
-        if (done) break;
+        if (done) {
+          console.log("流读取完成");
+          break;
+        }
 
-        const text = decoder.decode(value);
-        console.log("收到流数据:", text);
+        // 解码二进制数据
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
 
-        const events = text.split("\n").filter(Boolean);
+        // 按行分割并处理完整的行
+        const lines = buffer.split("\n");
+        // 保留最后一行（可能不完整）
+        buffer = lines.pop() || "";
 
-        for (const event of events) {
+        console.log(`收到${lines.length}行数据`);
+
+        // 处理每一行
+        for (const line of lines) {
+          if (!line.trim()) continue; // 跳过空行
+
           try {
-            const parsedEvent = JSON.parse(event);
-            console.log("解析事件:", parsedEvent);
+            console.log("处理事件行:", line);
+            const activity = JSON.parse(line);
+            console.log("解析到活动:", activity);
 
-            if (parsedEvent.type === "activity") {
-              setActivities((prev) => [...prev, parsedEvent.data]);
-            } else if (parsedEvent.type === "activity_update") {
-              setActivities((prev) => {
-                const index = prev.findIndex(
-                  (a) => a.id === parsedEvent.data.id
+            // 直接将解析到的活动添加到列表中
+            receivedActivities.push(activity);
+
+            // 在状态中更新活动，使用函数形式确保获取最新状态
+            setActivities((currentActivities) => {
+              // 检查活动是否已存在（基于ID）
+              const exists = currentActivities.some(
+                (a) => a.id === activity.id
+              );
+              if (exists) {
+                // 如果存在，则更新它
+                return currentActivities.map((a) =>
+                  a.id === activity.id ? activity : a
                 );
-                if (index >= 0) {
-                  const newActivities = [...prev];
-                  newActivities[index] = parsedEvent.data;
-                  return newActivities;
-                }
-                return prev;
-              });
-            }
-          } catch (e) {
-            console.error("解析事件失败:", e, event);
+              } else {
+                // 如果不存在，则添加它
+                return [...currentActivities, activity];
+              }
+            });
+          } catch (err) {
+            console.error("解析事件失败:", err, line);
           }
         }
       }
+
+      console.log("总共接收到活动数:", receivedActivities.length);
+      console.log("最终接收到的活动:", receivedActivities);
     } catch (err) {
       console.error("研究过程出错:", err);
       setError(
         `研究过程失败: ${err instanceof Error ? err.message : String(err)}`
       );
     } finally {
+      console.log("研究过程结束，状态设为false");
       setIsResearching(false);
     }
   };

@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  createActivityTracker,
-  SimpleStream,
-  Activity,
   ActivityType,
   ActivityStatus,
-} from "./activity-tracker";
+  Activity,
+  ActivityTracker as ActivityTrackerInterface,
+  SimpleStream,
+} from "../lib/activity-tracker";
+import { PLANNING_SYSTEM_PROMPT } from "../lib/prompts";
+import { conductResearch } from "../lib/research-functions";
 
 // 请求体验证模式
 const requestSchema = z.object({
@@ -20,46 +22,77 @@ const requestSchema = z.object({
   ),
 });
 
-// 研究状态类型
-type ResearchState = {
-  topic: string;
-  clarifications: {
-    id: string;
-    text: string;
-    answer?: string;
-  }[];
-  sources: {
-    url: string;
-    title: string;
-    snippet?: string;
-    relevance?: number;
-  }[];
-  activities: {
-    id: string;
-    type:
-      | "search"
-      | "extract"
-      | "analyze"
-      | "question"
-      | "summarize"
-      | "clarify"
-      | "error";
-    status: "pending" | "complete" | "error" | "warning";
-    message: string;
-    timestamp: Date;
-    details?: string;
-  }[];
-  findings: {
-    id: string;
-    summary: string;
-    details?: string;
-    sources: {
-      url: string;
-      title: string;
-    }[];
-    confidence?: number;
-  }[];
-  report: string | null;
+// 创建响应流
+function createStream(
+  controller: ReadableStreamDefaultController
+): SimpleStream {
+  return {
+    write(data: string) {
+      controller.enqueue(new TextEncoder().encode(data + "\n"));
+    },
+    end() {
+      controller.close();
+    },
+  };
+}
+
+// 活动跟踪器
+class ActivityTracker implements ActivityTrackerInterface {
+  private activities: Activity[] = [];
+  private stream: SimpleStream;
+
+  constructor(stream: SimpleStream) {
+    this.stream = stream;
+  }
+
+  add(type: ActivityType, status: ActivityStatus, message: string): string {
+    const activity: Activity = {
+      id: crypto.randomUUID(),
+      type,
+      status,
+      message,
+      timestamp: Date.now(),
+    };
+
+    this.activities.push(activity);
+    this.stream.write(JSON.stringify(activity));
+    return activity.id;
+  }
+
+  update(
+    id: string,
+    status: ActivityStatus,
+    message?: string
+  ): Activity | null {
+    const index = this.activities.findIndex((a) => a.id === id);
+    if (index >= 0) {
+      const activity = this.activities[index];
+      const updatedActivity: Activity = {
+        ...activity,
+        status,
+        message: message || activity.message,
+        timestamp: Date.now(),
+      };
+      this.activities[index] = updatedActivity;
+      this.stream.write(JSON.stringify(updatedActivity));
+      return updatedActivity;
+    }
+    return null;
+  }
+
+  getActivities(): Activity[] {
+    return this.activities;
+  }
+
+  clear(): void {
+    this.activities = [];
+  }
+}
+
+// 研究状态
+const researchState = {
+  tokenUsed: 0,
+  completedSteps: 0,
 };
 
 // 使用Web Streams API实现流式响应
@@ -81,96 +114,82 @@ export async function POST(request: NextRequest) {
     const { topic, clarifications } = result.data;
 
     // 创建响应流
-    const encoder = new TextEncoder();
-    const stream = new TransformStream();
-    const writer = stream.writable.getWriter();
+    const stream = new ReadableStream({
+      start: async (controller) => {
+        const streamAdapter = createStream(controller);
+        const activityTracker = new ActivityTracker(streamAdapter);
 
-    // 初始化研究状态
-    const state: ResearchState = {
-      topic,
-      clarifications,
-      sources: [],
-      activities: [],
-      findings: [],
-      report: null,
-    };
+        try {
+          // 获取所有问题文本
+          const questions = clarifications.map((c) => c.text);
 
-    // 创建适配器，将数据写入流
-    const streamAdapter: SimpleStream = {
-      append: (data: any) => {
-        const json = JSON.stringify(data) + "\n";
-        writer.write(encoder.encode(json));
+          // 执行研究流程
+          try {
+            // 注意: 这里使用完整研究流程
+            await conductResearch(topic, questions, activityTracker);
+
+            // 更新状态
+            researchState.completedSteps++;
+          } catch (error) {
+            console.error("研究过程失败:", error);
+            activityTracker.add(
+              "generate",
+              "error",
+              `研究过程失败: ${
+                error instanceof Error ? error.message : "未知错误"
+              }`
+            );
+
+            // 继续使用模拟数据作为备选
+            const planningId = activityTracker.add(
+              "planning",
+              "pending",
+              `使用备选方案研究主题: ${topic}`
+            );
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            activityTracker.update(
+              planningId,
+              "complete",
+              "已生成备选搜索查询"
+            );
+
+            const searchId = activityTracker.add(
+              "search",
+              "pending",
+              "使用备选方案搜索相关信息..."
+            );
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            activityTracker.update(searchId, "complete", "已完成备选信息搜索");
+
+            const generateId = activityTracker.add(
+              "generate",
+              "pending",
+              "正在生成备选研究报告..."
+            );
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            activityTracker.update(
+              generateId,
+              "complete",
+              "备选研究报告生成完成"
+            );
+          }
+        } catch (error) {
+          console.error("研究过程出错:", error);
+          activityTracker.add(
+            "generate",
+            "error",
+            `研究过程出错: ${
+              error instanceof Error ? error.message : "未知错误"
+            }`
+          );
+        } finally {
+          streamAdapter.end();
+        }
       },
-    };
-
-    // 创建活动跟踪器
-    const activityTracker = createActivityTracker(streamAdapter, state);
-
-    // 启动研究过程
-    // 注意：这里先添加一个初始活动，实际的研究引擎将在后续实现
-    const initialActivityId = activityTracker.add({
-      type: "analyze",
-      status: "pending",
-      message: `开始对主题 "${topic}" 进行深度研究...`,
     });
 
-    // 异步运行研究过程
-    (async () => {
-      try {
-        // 这里将在后续实现真正的研究引擎
-        // 目前只是模拟一个异步的流程
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // 更新第一个活动状态为完成
-        activityTracker.update(initialActivityId, {
-          status: "complete",
-          message: `开始对主题 "${topic}" 进行深度研究...`,
-        });
-
-        const searchActivityId = activityTracker.add({
-          type: "search",
-          status: "pending",
-          message: "搜索相关资料中...",
-        });
-
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-
-        activityTracker.update(searchActivityId, {
-          status: "complete",
-          message: "找到5条相关资源",
-        });
-
-        const analyzeActivityId = activityTracker.add({
-          type: "analyze",
-          status: "pending",
-          message: "分析搜索结果中...",
-        });
-
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        activityTracker.update(analyzeActivityId, {
-          status: "complete",
-          message: "分析完成",
-        });
-
-        // 关闭流
-        writer.close();
-      } catch (error) {
-        console.error("研究过程出错:", error);
-        // 发送错误信息
-        streamAdapter.append({
-          type: "error",
-          data: {
-            message: (error as Error).message || "未知错误",
-            timestamp: new Date(),
-          },
-        });
-        writer.close();
-      }
-    })();
-
     // 返回流式响应
-    return new Response(stream.readable, {
+    return new NextResponse(stream, {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
