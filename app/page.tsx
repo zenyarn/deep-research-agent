@@ -1,103 +1,92 @@
 import Image from "next/image";
+import { logEnvStatus } from "@/lib/utils/env-validator";
+import { UserInputWrapper } from "@/components/core/UserInputWrapper";
+import { StoreDebugger } from "@/components/core/StoreDebugger";
+
+// 在服务器组件中执行环境变量检查
+export function generateMetadata() {
+  // 这会在服务器端控制台显示环境变量状态
+  logEnvStatus();
+
+  return {
+    title: "Deep Research AI Agent",
+    description: "一个强大的AI研究助手",
+  };
+}
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
+    <main className="flex-1 relative overflow-hidden">
+      {/* 背景图片 */}
+      <div className="absolute inset-0 z-0">
         <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
+          src="/images/research-bg.jpg"
+          alt="Research Background"
+          fill
           priority
+          className="object-cover opacity-20"
+          sizes="100vw"
+          quality={85}
         />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+        <div className="absolute inset-0 bg-black/40" />
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* 主要内容 */}
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 py-12 sm:px-6 lg:px-8 text-center">
+        {/* 标题部分 */}
+        <div className="max-w-4xl mx-auto mb-12 space-y-4">
+          <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight">
+            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-primary-300 via-primary-500 to-primary-700">
+              Deep Research
+            </span>
+            <span className="block text-white mt-1">AI Agent</span>
+          </h1>
+
+          <p className="mt-6 text-xl sm:text-2xl text-white/80 max-w-2xl mx-auto">
+            一个强大的AI研究助手，能够对任何主题进行深入、全面的研究
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+
+        {/* 用户输入部分 */}
+        <div className="w-full max-w-3xl">
+          <UserInputWrapper />
+        </div>
+
+        {/* 特性描述 */}
+        <div className="mt-20 grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <FeatureCard
+            title="深度研究"
+            description="多轮、多步骤的迭代研究过程，确保全面且深入的探索"
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+          <FeatureCard
+            title="实时活动"
+            description="展示研究过程中的每个步骤和发现，让您了解每个环节"
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
+          <FeatureCard
+            title="结构化报告"
+            description="自动生成组织良好的报告，包含见解、数据和引用"
           />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+      </div>
+
+      {/* 状态调试器 - 仅开发环境显示 */}
+      {process.env.NODE_ENV === "development" && <StoreDebugger />}
+    </main>
+  );
+}
+
+// 特性卡片组件
+function FeatureCard({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/10 shadow-xl">
+      <h3 className="text-xl font-semibold text-white mb-2">{title}</h3>
+      <p className="text-white/70">{description}</p>
     </div>
   );
 }
