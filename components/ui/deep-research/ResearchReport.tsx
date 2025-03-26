@@ -13,59 +13,189 @@ import { nightOwl } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { useState, useEffect } from "react";
 
 export function ResearchReport() {
-  const { report, isCompleted, isLoading, topic } = useDeepResearchStore();
+  const { report, isCompleted, isLoading, topic, streamingContent } =
+    useDeepResearchStore();
   const [markdownContent, setMarkdownContent] = useState<string>("");
+  const [renderError, setRenderError] = useState<string | null>(null);
+
+  // 添加日志以便调试
+  useEffect(() => {
+    console.log(
+      "ResearchReport组件接收到report:",
+      report
+        ? {
+            title: report.title,
+            isPlainText: report.isPlainText,
+            contentLength: report.content ? report.content.length : 0,
+            hasGeneratedAt: !!report.generatedAt,
+            hasSections: !!report.sections,
+            sectionsLength: report.sections ? report.sections.length : 0,
+            reportType: typeof report,
+            allKeys: Object.keys(report || {}),
+            rawContentPreview: report.content
+              ? `${report.content.substring(0, 100)}...`
+              : "无内容",
+          }
+        : "无报告"
+    );
+    console.log(
+      "流式内容长度:",
+      streamingContent ? streamingContent.length : 0
+    );
+  }, [report, streamingContent]);
 
   // 生成Markdown内容
   useEffect(() => {
-    if (!report) return;
+    if (!report) {
+      console.log("无报告对象，不生成Markdown内容");
 
-    // 构建Markdown内容
-    let markdown = `# ${report.title}\n\n`;
-    markdown += `*生成于 ${formatDate(report.generatedAt)}*\n\n`;
-
-    markdown += `## 引言\n\n${report.introduction}\n\n`;
-
-    // 添加各部分内容
-    report.sections.forEach((section) => {
-      markdown += `## ${section.title}\n\n${section.content}\n\n`;
-
-      if (section.findings.length > 0) {
-        markdown += "### 主要发现\n\n";
-        section.findings.forEach((finding) => {
-          markdown += `- **${finding.summary}**`;
-          if (finding.details) {
-            markdown += `\n  ${finding.details}`;
-          }
-          markdown += "\n";
-        });
-        markdown += "\n";
+      // 如果没有报告但有流内容，可以显示流内容
+      if (streamingContent && streamingContent.trim() !== "") {
+        console.log("使用流内容作为备选，长度:", streamingContent.length);
+        setMarkdownContent(streamingContent);
       }
-    });
-
-    markdown += `## 结论\n\n${report.conclusion}\n\n`;
-
-    // 添加参考资料
-    if (report.references.length > 0) {
-      markdown += "## 参考资料\n\n";
-      report.references.forEach((ref, index) => {
-        markdown += `${index + 1}. [${ref.title || ref.url}](${ref.url})`;
-        if (ref.snippet) {
-          markdown += ` - ${ref.snippet}`;
-        }
-        markdown += "\n";
-      });
+      return;
     }
 
-    setMarkdownContent(markdown);
-  }, [report]);
+    try {
+      // 如果是纯文本报告，直接使用内容
+      if (report.isPlainText) {
+        // 使用报告内容，如果没有则回退到流内容
+        const content = report.content || streamingContent || "";
+
+        if (content && content.trim() !== "") {
+          console.log("使用纯文本报告内容，长度:", content.length);
+          console.log(
+            "纯文本内容前100字符:",
+            content.substring(0, 100) + "..."
+          );
+          setMarkdownContent(content);
+          setRenderError(null);
+        } else {
+          console.warn("警告: 报告内容和流内容都为空");
+          setMarkdownContent("*报告内容为空*");
+          setRenderError("报告内容为空，请重试研究过程");
+        }
+        return;
+      }
+
+      // 否则按照旧版本的结构化报告构建Markdown
+      console.log("构建结构化报告的Markdown");
+      let markdown = `# ${report.title || topic + "研究报告"}\n\n`;
+
+      // 处理日期
+      const reportDate = report.generatedAt || report.date;
+      if (reportDate) {
+        try {
+          markdown += `*生成于 ${formatDate(reportDate)}*\n\n`;
+        } catch (e) {
+          console.error("格式化日期出错:", e);
+          markdown += `*生成于 ${new Date().toLocaleString("zh-CN")}*\n\n`;
+        }
+      } else {
+        markdown += `*生成于 ${new Date().toLocaleString("zh-CN")}*\n\n`;
+      }
+
+      markdown += `## 引言\n\n${report.introduction || ""}\n\n`;
+
+      // 添加各部分内容
+      if (report.sections && Array.isArray(report.sections)) {
+        console.log(`处理${report.sections.length}个报告部分`);
+        report.sections.forEach((section, idx) => {
+          if (section && typeof section === "object") {
+            console.log(
+              `处理第${idx + 1}部分: ${section.title || "无标题部分"}`
+            );
+            markdown += `## ${section.title || `第${idx + 1}部分`}\n\n${
+              section.content || ""
+            }\n\n`;
+
+            if (
+              section.findings &&
+              Array.isArray(section.findings) &&
+              section.findings.length > 0
+            ) {
+              console.log(
+                `第${idx + 1}部分有${section.findings.length}个发现点`
+              );
+              markdown += "### 主要发现\n\n";
+              section.findings.forEach((finding) => {
+                if (finding && typeof finding === "object") {
+                  markdown += `- **${finding.summary || "未命名发现"}**`;
+                  if (finding.details) {
+                    markdown += `\n  ${finding.details}`;
+                  }
+                  markdown += "\n";
+                }
+              });
+              markdown += "\n";
+            }
+          }
+        });
+      } else {
+        console.log("报告没有sections数组或sections为空");
+        // 如果没有sections但有content，把content作为主要内容
+        if (report.content) {
+          markdown += `## 主要内容\n\n${report.content}\n\n`;
+        }
+      }
+
+      markdown += `## 结论\n\n${report.conclusion || ""}\n\n`;
+
+      // 添加参考资料
+      if (
+        report.references &&
+        Array.isArray(report.references) &&
+        report.references.length > 0
+      ) {
+        console.log(`处理${report.references.length}个参考资料`);
+        markdown += "## 参考资料\n\n";
+        report.references.forEach((ref, index) => {
+          if (ref && typeof ref === "object" && ref.url) {
+            markdown += `${index + 1}. [${ref.title || ref.url}](${ref.url})`;
+            if (ref.snippet) {
+              markdown += ` - ${ref.snippet}`;
+            }
+            markdown += "\n";
+          }
+        });
+      }
+
+      console.log("生成的Markdown内容长度:", markdown.length);
+      console.log("Markdown内容前100字符:", markdown.substring(0, 100) + "...");
+      setMarkdownContent(markdown);
+      setRenderError(null);
+    } catch (error) {
+      console.error("生成Markdown内容时出错:", error);
+
+      // 如果生成Markdown失败但有原始内容，直接使用原始内容
+      if (report.content || streamingContent) {
+        const content = report.content || streamingContent;
+        console.log("使用原始内容作为备选:", content.substring(0, 100) + "...");
+        setMarkdownContent(content);
+        setRenderError(
+          `生成格式化报告失败，显示原始内容。错误: ${
+            error instanceof Error ? error.message : "未知错误"
+          }`
+        );
+      } else {
+        setRenderError(
+          `生成报告内容出错: ${
+            error instanceof Error ? error.message : "未知错误"
+          }`
+        );
+      }
+    }
+  }, [report, streamingContent, topic]);
 
   // 显示逻辑
-  if (!isCompleted && !report) {
+  if (!isCompleted && !report && !streamingContent) {
+    console.log("研究未完成且无报告和流内容，不显示组件");
     return null;
   }
 
-  if (isLoading && !report) {
+  if (isLoading && !report && !streamingContent) {
+    console.log("显示加载状态");
     return (
       <Card className="w-full max-w-4xl mx-auto mt-8 bg-white/90 dark:bg-slate-900/90">
         <CardHeader>
@@ -83,7 +213,25 @@ export function ResearchReport() {
     );
   }
 
-  if (!report) return null;
+  // 如果没有报告对象但有流内容，我们可以渲染流内容
+  if (!report && !markdownContent && !streamingContent) {
+    console.log("无报告对象且无内容，不渲染");
+    return null;
+  }
+
+  // 判断是否为纯文本内容
+  const hasContent = !!markdownContent || !!streamingContent;
+  const reportTitle = report?.title || `${topic}研究报告`;
+
+  console.log("渲染报告:", {
+    title: reportTitle,
+    hasReport: !!report,
+    isPlainText: report?.isPlainText,
+    markdownContentLength: markdownContent.length,
+    hasStreamingContent: !!streamingContent,
+    streamingContentLength: streamingContent ? streamingContent.length : 0,
+    hasError: !!renderError,
+  });
 
   return (
     <Card className="w-full max-w-4xl mx-auto mt-8 mb-16 bg-gray-600/80 text-slate-100 backdrop-blur-md border border-gray-500/50 shadow-xl">
@@ -100,97 +248,31 @@ export function ResearchReport() {
           </Button>
         </div>
         <CardTitle className="text-3xl mb-2 text-white">
-          {report.title}
+          {reportTitle}
         </CardTitle>
         <p className="text-sm text-gray-300">
-          生成于 {formatDate(report.generatedAt)}
+          生成于 {formatDate(report?.generatedAt || report?.date || new Date())}
         </p>
       </CardHeader>
       <CardContent className="p-6 prose prose-invert prose-headings:text-white prose-p:text-white prose-li:text-white max-w-none text-left">
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">引言</h2>
-          <div className="text-left">
-            <MarkdownRenderer>{report.introduction}</MarkdownRenderer>
+        {renderError && (
+          <div className="bg-red-900/50 p-4 mb-4 rounded-md text-red-200">
+            <p className="font-medium">报告渲染警告</p>
+            <p>{renderError}</p>
           </div>
-        </div>
+        )}
 
-        {report.sections.map((section) => (
-          <div key={section.id} className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">{section.title}</h2>
-            <div className="text-left">
-              <MarkdownRenderer>{section.content}</MarkdownRenderer>
-            </div>
-
-            {section.findings.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-xl font-semibold mb-3">主要发现</h3>
-                <div className="space-y-4">
-                  {section.findings.map((finding) => (
-                    <div
-                      key={finding.id}
-                      className="bg-gray-700/50 p-4 rounded-lg"
-                    >
-                      <p className="font-medium text-white">
-                        {finding.summary}
-                      </p>
-                      {finding.details && (
-                        <p className="mt-2 text-white">{finding.details}</p>
-                      )}
-                      {finding.sources.length > 0 && (
-                        <div className="mt-2 text-sm">
-                          <span className="text-gray-300">来源：</span>
-                          {finding.sources.map((source, i) => (
-                            <span key={source.url}>
-                              <a
-                                href={source.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-gray-300 hover:text-white hover:underline"
-                              >
-                                {source.title || source.url}
-                              </a>
-                              {i < finding.sources.length - 1 ? ", " : ""}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+        {hasContent ? (
+          <div className="bg-gray-700/10 p-8 rounded-xl">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {markdownContent || streamingContent}
+            </ReactMarkdown>
           </div>
-        ))}
-
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">结论</h2>
-          <div className="text-left">
-            <MarkdownRenderer>{report.conclusion}</MarkdownRenderer>
-          </div>
-        </div>
-
-        {report.references.length > 0 && (
-          <div>
-            <h2 className="text-2xl font-semibold mb-4">参考资料</h2>
-            <ul className="space-y-2 list-decimal pl-5">
-              {report.references.map((reference) => (
-                <li key={reference.url} className="text-white">
-                  <a
-                    href={reference.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-300 hover:text-blue-200 hover:underline"
-                  >
-                    {reference.title || reference.url}
-                  </a>
-                  {reference.snippet && (
-                    <p className="mt-1 text-sm text-gray-300">
-                      {reference.snippet}
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ul>
+        ) : (
+          <div className="flex flex-col items-center justify-center p-10">
+            <p className="text-center text-gray-400">
+              报告内容为空，请重试研究过程
+            </p>
           </div>
         )}
       </CardContent>
@@ -199,13 +281,14 @@ export function ResearchReport() {
 
   // 处理Markdown下载
   function handleMarkdownDownload() {
-    if (!report) return;
+    if (!markdownContent && !streamingContent) return;
 
+    const contentToDownload = markdownContent || streamingContent;
     const filename = `${topic.replace(
       /\s+/g,
       "-"
     )}-research-report.md`.toLowerCase();
-    const blob = new Blob([markdownContent], { type: "text/markdown" });
+    const blob = new Blob([contentToDownload], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement("a");
@@ -223,9 +306,22 @@ export function ResearchReport() {
 }
 
 // 格式化日期
-function formatDate(date: Date): string {
+function formatDate(date: Date | string | undefined): string {
+  if (!date) {
+    return "生成时间未知";
+  }
+
   try {
-    return new Date(date).toLocaleString("zh-CN", {
+    // 如果是字符串，先转为Date对象
+    const dateObj = typeof date === "string" ? new Date(date) : date;
+
+    // 检查是否是有效的日期
+    if (isNaN(dateObj.getTime())) {
+      console.error("无效的日期对象:", date);
+      return "生成时间未知";
+    }
+
+    return dateObj.toLocaleString("zh-CN", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -233,7 +329,8 @@ function formatDate(date: Date): string {
       minute: "2-digit",
     });
   } catch (e) {
-    return "未知时间";
+    console.error("日期格式化错误:", e);
+    return "生成时间未知";
   }
 }
 

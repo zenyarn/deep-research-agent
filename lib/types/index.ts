@@ -82,6 +82,9 @@ export interface Report {
   conclusion: string; // 报告结论
   references: Source[]; // 报告引用
   generatedAt: Date; // 报告生成时间
+  isPlainText?: boolean;
+  content?: string;
+  date?: string; // ISO格式的日期字符串
 }
 
 /**
@@ -118,6 +121,14 @@ export interface DeepResearchState {
   findings: ResearchFinding[]; // 研究发现
   report: Report | null; // 最终研究报告
 
+  // 流式数据状态
+  streamConnection: {
+    reader: ReadableStreamDefaultReader<Uint8Array>;
+    active: boolean;
+  } | null; // 流连接
+  streamingContent: string; // 流式内容
+  isStreamConnected: boolean; // 是否已连接到流
+
   // 状态管理函数
   setTopic: (topic: string) => void;
   setQuestions: (questions: Question[]) => void;
@@ -127,6 +138,16 @@ export interface DeepResearchState {
   setIsCompleted: (isCompleted: boolean) => void;
   setIsLoading: (isLoading: boolean) => void;
   setResearchState: (state: ResearchState) => void; // 设置研究状态
+
+  // 流式研究相关函数
+  connectToStream: (topic: string, questions: string[]) => Promise<void>; // 连接到流
+  disconnectStream: () => void; // 断开流连接
+  handleActivityEvent: (activity: any) => void; // 处理活动事件
+  handleSourceEvent: (source: any) => void; // 处理来源事件
+  handleReportEvent: (payload: { content: string }) => void; // 处理报告事件
+  handleCompleteEvent: (payload: any) => void; // 处理完成事件
+  handleErrorEvent: (payload: { message: string }) => void; // 处理错误事件
+
   startResearch: () => Promise<void>; // 开始研究过程
   addActivity: (activity: Omit<Activity, "id" | "timestamp">) => void;
   updateActivityStatus: (

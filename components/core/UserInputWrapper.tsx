@@ -13,6 +13,7 @@ export function UserInputWrapper() {
     isLoading,
     setQuestions,
     reset,
+    startResearch,
   } = useDeepResearchStore();
 
   const handleSubmit = async (topic: string) => {
@@ -31,51 +32,47 @@ export function UserInputWrapper() {
     });
 
     try {
-      // 这里仅作演示，未来将替换为真正的API调用
-      // 模拟API请求延迟
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // 调用API生成主题相关的问题
+      const questionsResponse = await fetch("/api/generate-questions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ topic }),
+      });
 
-      // 模拟生成问题
-      const generatedQuestions = [
-        {
-          id: uuidv4(),
-          text: `"${topic}"的主要发展历史是什么？`,
-        },
-        {
-          id: uuidv4(),
-          text: `"${topic}"目前面临的最大挑战是什么？`,
-        },
-        {
-          id: uuidv4(),
-          text: `"${topic}"的未来发展趋势如何？`,
-        },
-        {
-          id: uuidv4(),
-          text: `"${topic}"在全球范围内的影响力如何？`,
-        },
-        {
-          id: uuidv4(),
-          text: `如何评价"${topic}"的社会价值？`,
-        },
-      ];
+      if (!questionsResponse.ok) {
+        throw new Error(`生成问题请求失败: ${questionsResponse.status}`);
+      }
 
-      // 更新状态
+      const questionTexts = await questionsResponse.json();
+
+      // 转换为问题对象格式
+      const generatedQuestions = questionTexts.map((text: string) => ({
+        id: uuidv4(),
+        text: text,
+      }));
+
+      // 更新questions状态
       setQuestions(generatedQuestions);
 
       // 更新活动状态
       addActivity({
         type: "question",
         status: "complete",
-        message: `成功生成5个关于"${topic}"的研究问题`,
+        message: `成功生成${generatedQuestions.length}个关于"${topic}"的研究问题`,
       });
+
+      // 直接开始研究流程
+      await startResearch();
     } catch (error) {
-      console.error("生成问题失败:", error);
+      console.error("研究启动失败:", error);
 
       // 添加错误活动
       addActivity({
         type: "error",
         status: "error",
-        message: `生成问题失败: ${
+        message: `研究启动失败: ${
           error instanceof Error ? error.message : String(error)
         }`,
       });

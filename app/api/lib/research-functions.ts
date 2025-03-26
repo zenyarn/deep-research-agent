@@ -27,6 +27,73 @@ function getApiKey(): string {
   return apiKey;
 }
 
+// 添加一个安全获取API响应内容的辅助函数
+function safeGetContentFromApiResponse(data: any): string {
+  try {
+    // 检查data是否存在
+    if (!data) {
+      console.log("API响应为空");
+      return "";
+    }
+
+    // 记录响应结构，帮助调试
+    console.log(
+      "API响应结构:",
+      JSON.stringify({
+        hasChoices: Array.isArray(data.choices),
+        choicesLength: Array.isArray(data.choices) ? data.choices.length : 0,
+        firstChoice:
+          data.choices && data.choices.length > 0
+            ? typeof data.choices[0]
+            : "不存在",
+        hasMessage:
+          data.choices && data.choices.length > 0 && data.choices[0]
+            ? "message" in data.choices[0]
+            : false,
+      })
+    );
+
+    // 如果是标准结构，按正常方式获取
+    if (data.choices && data.choices.length > 0 && data.choices[0].message) {
+      return data.choices[0].message.content || "";
+    }
+
+    // Claude直接输出模式
+    if (data.content) {
+      return data.content;
+    }
+
+    // 其他可能的结构
+    if (data.choices && data.choices.length > 0) {
+      // OpenAI格式变体
+      if (data.choices[0].text) {
+        return data.choices[0].text;
+      }
+
+      // 可能是直接内容
+      if (typeof data.choices[0] === "string") {
+        return data.choices[0];
+      }
+
+      // 其他可能的属性
+      if (data.choices[0].content) {
+        return data.choices[0].content;
+      }
+    }
+
+    // 如果有message但结构不同
+    if (data.message && typeof data.message === "object") {
+      return data.message.content || "";
+    }
+
+    console.warn("无法从API响应中提取内容，使用空字符串");
+    return "";
+  } catch (error) {
+    console.error("从API响应中提取内容时出错:", error);
+    return "";
+  }
+}
+
 /**
  * 生成搜索查询
  * @param topic 研究主题
@@ -96,13 +163,10 @@ export async function generateSearchQueries(
     }
 
     const data = await response.json();
-    console.log(
-      "API响应消息:",
-      JSON.stringify(data.choices[0].message).substring(0, 100) + "..."
-    );
+    console.log("API响应消息:", JSON.stringify(data).substring(0, 100) + "...");
 
-    // 尝试从响应中提取查询
-    const content = data.choices[0].message.content;
+    // 使用安全获取内容的函数
+    const content = safeGetContentFromApiResponse(data);
     let queries = [];
 
     try {
@@ -257,7 +321,8 @@ export async function extractInformation(
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    // 使用安全获取内容的函数
+    const content = safeGetContentFromApiResponse(data);
 
     // 记录原始响应用于调试
     console.log(
@@ -368,7 +433,8 @@ export async function analyzeFindings(
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    // 使用安全获取内容的函数
+    const content = safeGetContentFromApiResponse(data);
 
     // 记录原始响应用于调试
     console.log(
@@ -456,10 +522,8 @@ export async function generateReport(
       max_tokens: modelParams.max_tokens,
     };
 
-    // 如果是JSON输出型任务且使用支持的模型，添加response_format
-    if (isGeminiModel) {
-      requestBody.response_format = { type: "json_object" };
-    }
+    // 移除response_format要求，我们需要的是纯文本格式的报告
+    // 不再需要指定JSON格式
 
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
@@ -480,7 +544,8 @@ export async function generateReport(
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    // 使用安全获取内容的函数
+    const content = safeGetContentFromApiResponse(data);
 
     // 记录原始响应用于调试
     console.log(
@@ -488,44 +553,37 @@ export async function generateReport(
       content.substring(0, 500) + (content.length > 500 ? "..." : "")
     );
 
-    try {
-      // 尝试直接解析JSON
-      if (isGeminiModel) {
-        try {
-          // Gemini通常返回格式良好的JSON
-          const report = JSON.parse(content);
-          console.log("Gemini模型返回的JSON解析成功");
-          return report;
-        } catch (e) {
-          console.log("Gemini返回的内容解析失败，尝试使用通用解析函数:", e);
-        }
+    // 确保我们有报告内容，即使是空的
+    if (content && content.trim() !== "") {
+      // 为活动跟踪器添加报告内容
+      if ("sendReportUpdate" in activityTracker) {
+        (activityTracker as any).sendReportUpdate(content);
       }
 
-      // 使用增强的JSON解析函数
-      const report = extractAndParseJSON(content);
-      return report;
-    } catch (e) {
-      console.error("解析报告结果出错:", e);
-      return {
-        title: "研究报告",
-        date: new Date().toISOString(),
-        introduction: "无法解析报告内容",
-        methodology: "",
-        findings: [],
-        conclusion: "",
-        references: [],
-      };
+      return { content, title: `${topic}研究报告` };
+    } else {
+      // 生成一个基本的报告结构，避免完全失败
+      const fallbackReport = `# ${topic}研究报告\n\n由于技术原因，无法生成完整报告。请稍后再试。\n\n`;
+
+      // 为活动跟踪器添加报告内容
+      if ("sendReportUpdate" in activityTracker) {
+        (activityTracker as any).sendReportUpdate(fallbackReport);
+      }
+
+      return { content: fallbackReport, title: `${topic}研究报告` };
     }
   } catch (error) {
     console.error("生成报告出错:", error);
     return {
-      title: "研究报告",
+      title: `${topic}研究报告`,
       date: new Date().toISOString(),
+      content: "生成报告时出错，请重试。",
       introduction: "API调用错误，无法生成报告",
       methodology: "",
       findings: [],
       conclusion: "",
       references: [],
+      isPlainText: true,
     };
   }
 }
@@ -572,6 +630,18 @@ export async function conductResearch(
     `已完成信息搜索，找到 ${searchResults.length} 个结果`
   );
 
+  // 将搜索结果添加为来源
+  searchResults.forEach((result) => {
+    if ("addSource" in activityTracker) {
+      (activityTracker as any).addSource({
+        url: result.url,
+        title: result.title,
+        snippet: result.text.substring(0, 200) + "...",
+        relevance: 0.7, // 使用默认相关度
+      });
+    }
+  });
+
   // 步骤3: 提取和分析信息
   const extractId = activityTracker.add(
     "extract",
@@ -600,6 +670,28 @@ export async function conductResearch(
       findings: findings.findings || [],
       analysis,
     });
+
+    // 移除部分报告更新逻辑，等待完整报告生成后再发送
+    // 不再发送部分报告更新
+    /* 
+    if ("sendReportUpdate" in activityTracker) {
+      // 创建该问题的部分报告内容
+      const partialReport = `
+## ${question}
+
+### 主要发现
+
+${(findings.findings || []).map((f: any) => `- ${f.fact}`).join("\n")}
+
+### 分析
+
+${analysis.summary || "正在分析..."} 
+${analysis.details || ""}
+`;
+
+      (activityTracker as any).sendReportUpdate(partialReport);
+    }
+    */
   }
 
   activityTracker.update(extractId, "complete", "已完成信息提取和分析");
@@ -616,14 +708,9 @@ export async function conductResearch(
     allFindings,
     activityTracker
   );
+
   activityTracker.update(generateId, "complete", "研究报告生成完成");
 
-  return {
-    report,
-    data: {
-      queries,
-      searchResults,
-      findings: allFindings,
-    },
-  };
+  // 返回研究结果
+  return report;
 }

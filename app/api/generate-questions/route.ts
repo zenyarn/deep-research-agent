@@ -1,6 +1,73 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+// 安全获取API响应内容的辅助函数
+function safeGetContentFromApiResponse(data: any): string {
+  try {
+    // 检查data是否存在
+    if (!data) {
+      console.log("API响应为空");
+      return "";
+    }
+
+    // 记录响应结构，帮助调试
+    console.log(
+      "API响应结构:",
+      JSON.stringify({
+        hasChoices: Array.isArray(data.choices),
+        choicesLength: Array.isArray(data.choices) ? data.choices.length : 0,
+        firstChoice:
+          data.choices && data.choices.length > 0
+            ? typeof data.choices[0]
+            : "不存在",
+        hasMessage:
+          data.choices && data.choices.length > 0 && data.choices[0]
+            ? "message" in data.choices[0]
+            : false,
+      })
+    );
+
+    // 如果是标准结构，按正常方式获取
+    if (data.choices && data.choices.length > 0 && data.choices[0].message) {
+      return data.choices[0].message.content || "";
+    }
+
+    // Claude直接输出模式
+    if (data.content) {
+      return data.content;
+    }
+
+    // 其他可能的结构
+    if (data.choices && data.choices.length > 0) {
+      // OpenAI格式变体
+      if (data.choices[0].text) {
+        return data.choices[0].text;
+      }
+
+      // 可能是直接内容
+      if (typeof data.choices[0] === "string") {
+        return data.choices[0];
+      }
+
+      // 其他可能的属性
+      if (data.choices[0].content) {
+        return data.choices[0].content;
+      }
+    }
+
+    // 如果有message但结构不同
+    if (data.message && typeof data.message === "object") {
+      return data.message.content || "";
+    }
+
+    console.warn("无法从API响应中提取内容，使用空字符串");
+    return "";
+  } catch (error) {
+    console.error("从API响应中提取内容时出错:", error);
+    return "";
+  }
+}
+
 // 使用直接的fetch方式调用OpenRouter API
 async function generateQuestions(topic: string): Promise<string[]> {
   console.log("正在为主题生成问题:", topic);
@@ -60,13 +127,10 @@ async function generateQuestions(topic: string): Promise<string[]> {
     }
 
     const data = await response.json();
-    console.log(
-      "API响应消息:",
-      JSON.stringify(data.choices[0].message).substring(0, 100) + "..."
-    );
+    console.log("API响应消息:", JSON.stringify(data).substring(0, 100) + "...");
 
-    // 尝试从响应中提取问题
-    const content = data.choices[0].message.content;
+    // 使用安全获取内容的函数
+    const content = safeGetContentFromApiResponse(data);
     let questions = [];
 
     try {
@@ -74,6 +138,9 @@ async function generateQuestions(topic: string): Promise<string[]> {
       const parsed = JSON.parse(content);
       if (Array.isArray(parsed.questions)) {
         questions = parsed.questions;
+      } else if (Array.isArray(parsed)) {
+        // 处理直接返回数组的情况
+        questions = parsed;
       } else if (parsed.questions) {
         questions = [parsed.questions];
       }

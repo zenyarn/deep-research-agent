@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { QuestionForm } from "./QuestionForm";
-import { CompletedQuestions } from "./CompletedQuestions";
 import { ResearchActivities } from "./ResearchActivities";
 import { ResearchTimer } from "./ResearchTimer";
 import { ResearchReport } from "./ResearchReport";
@@ -11,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, PlayIcon } from "lucide-react";
 import { ResearchActivities as AdvancedResearchActivities } from "@/components/ui/deep-research/ResearchActivities";
 import { ResearchReport as AdvancedResearchReport } from "@/components/ui/deep-research/ResearchReport";
+import { UserInputWrapper } from "./UserInputWrapper";
 
 export function QnA() {
   const {
@@ -26,33 +25,6 @@ export function QnA() {
 
   const [loading, setLoading] = useState(false);
 
-  // 检查是否所有问题都已回答
-  const allQuestionsAnswered = questions.every(
-    (q) => q.answer && q.answer.trim() !== ""
-  );
-
-  // 检查是否有至少一个问题已回答（用于启用研究按钮）
-  const hasAnsweredQuestions = questions.some(
-    (q) => q.answer && q.answer.trim() !== ""
-  );
-
-  // 开始研究过程
-  const handleStartResearch = async () => {
-    if (!hasAnsweredQuestions || isResearching) return;
-
-    setLoading(true);
-
-    try {
-      // 调用store中的startResearch方法，该方法会向后端API发起请求
-      await startResearch();
-    } catch (error) {
-      console.error("研究过程出错:", error);
-      setResearchState("error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="w-full max-w-7xl mx-auto p-4 space-y-6">
       {/* 显示当前研究状态 */}
@@ -66,7 +38,7 @@ export function QnA() {
         </div>
       )}
 
-      {/* 显示报告或问答流程 */}
+      {/* 显示报告或研究界面 */}
       {report ? (
         <AdvancedResearchReport />
       ) : (
@@ -77,39 +49,28 @@ export function QnA() {
               : "space-y-6"
           }`}
         >
-          {/* 问题和已完成问题区域 */}
+          {/* 主题输入和研究活动区域 */}
           <div
             className={`${
               isResearching ? "lg:col-span-2" : "w-full"
             } space-y-8`}
           >
-            {/* 问题表单 */}
-            <QuestionForm />
-
-            {/* 已完成的问题列表 */}
-            <CompletedQuestions />
-
-            {/* 开始研究按钮 */}
-            {!isResearching && !report && hasAnsweredQuestions && (
-              <div className="flex justify-center mt-8">
-                <Button
-                  onClick={handleStartResearch}
-                  disabled={loading || isResearching || !hasAnsweredQuestions}
-                  className="w-full max-w-md"
-                  size="lg"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      正在准备研究...
-                    </>
-                  ) : (
-                    <>
-                      <PlayIcon className="mr-2 h-4 w-4" />
-                      开始深度研究
-                    </>
-                  )}
-                </Button>
+            {/* 主题输入 - 当不在研究中时始终显示 */}
+            {!isResearching ? (
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-center text-white mb-6">
+                  输入您想研究的主题
+                </h2>
+                <UserInputWrapper />
+              </div>
+            ) : (
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-center text-white mb-6">
+                  研究进行中
+                </h2>
+                <p className="text-center text-muted-foreground">
+                  系统正在自动研究您的问题，请稍候...
+                </p>
               </div>
             )}
           </div>
