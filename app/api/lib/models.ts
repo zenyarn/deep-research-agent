@@ -18,30 +18,30 @@ interface ModelParamsMap {
 // 为不同任务配置适合的模型
 export const MODELS = {
   // 用于生成搜索查询
-  PLANNING: "google/gemini-2.0-flash-thinking-exp:free",
+  PLANNING: "google/gemini-2.0-flash-001",
 
   // 用于从搜索结果中提取信息 - 使用更擅长JSON输出的模型
-  EXTRACTION: "google/gemini-2.0-flash-lite-preview-02-05:free",
+  EXTRACTION: "google/gemini-2.0-flash-lite-001",
 
   // 用于分析研究发现 - 使用更擅长JSON输出的模型
-  ANALYSIS: "google/gemini-2.0-flash-lite-preview-02-05:free",
+  ANALYSIS: "google/gemini-2.0-flash-lite-001",
 
   // 用于生成研究报告 - 使用更擅长JSON输出的模型
-  REPORT: "google/gemini-2.0-flash-lite-preview-02-05:free",
+  REPORT: "google/gemini-2.0-flash-lite-001",
 };
 
 // 模型参数配置
 export const MODEL_PARAMS: ModelParamsMap = {
-  "google/gemini-2.0-flash-thinking-exp:free": {
+  "google/gemini-2.0-flash-001": {
     temperature: 0.7,
     top_p: 0.95,
-    max_tokens: 2000,
+    max_tokens: 4000,
   },
   // Gemini JSON输出模型参数
-  "google/gemini-2.0-flash-lite-preview-02-05:free": {
+  "google/gemini-2.0-flash-lite-001": {
     temperature: 0.3, // 降低温度以增加输出的确定性
     top_p: 0.95,
-    max_tokens: 2000,
+    max_tokens: 8000, // 增加令牌限制，特别是用于报告生成
   },
   // 可以为其他模型添加不同的参数配置
 };
@@ -53,8 +53,5 @@ export function getModelForTask(task: keyof typeof MODELS) {
 
 // 获取模型的参数配置
 export function getModelParams(modelId: string): ModelParams {
-  return (
-    MODEL_PARAMS[modelId] ||
-    MODEL_PARAMS["google/gemini-2.0-flash-thinking-exp:free"]
-  );
+  return MODEL_PARAMS[modelId] || MODEL_PARAMS["google/gemini-2.0-flash-001"];
 }

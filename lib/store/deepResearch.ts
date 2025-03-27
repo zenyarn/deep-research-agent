@@ -9,6 +9,7 @@ import {
   ResearchFinding,
   Source,
   ResearchState,
+  ReportPayload,
 } from "@/lib/types";
 
 /**
@@ -298,31 +299,61 @@ export const useDeepResearchStore = create<DeepResearchState>((set, get) => ({
 
   // 处理报告事件
   handleReportEvent: (payload) => {
-    const { content } = payload;
-    console.log(`收到报告事件，内容长度: ${content ? content.length : 0}字符`);
+    // 提取payload中的属性
+    const {
+      content,
+      isChunk = false,
+      chunkIndex = 0,
+      totalChunks = 1,
+    } = payload as ReportPayload;
+
+    // 记录接收到的报告状态
     console.log(
-      `报告内容预览: ${content ? content.substring(0, 100) + "..." : "无内容"}`
+      `处理报告事件: ${
+        isChunk ? `第 ${chunkIndex + 1}/${totalChunks} 块` : "完整内容"
+      }`
     );
+    console.log(`内容长度: ${content.length}字符`);
 
     set((state) => {
-      const newContent = state.streamingContent + content;
-      console.log(`累计报告内容长度: ${newContent.length}字符`);
+      // 记录当前流内容状态
+      console.log(
+        `当前流内容长度: ${
+          state.streamingContent ? state.streamingContent.length : 0
+        }字符`
+      );
 
-      // 根据内容构建报告对象
-      const reportObj = createReportFromMarkdown(state.topic, newContent);
-      console.log("从Markdown构建的报告对象:", {
-        title: reportObj.title,
-        introLength: reportObj.introduction ? reportObj.introduction.length : 0,
-        sectionsCount: reportObj.sections ? reportObj.sections.length : 0,
-        conclusionLength: reportObj.conclusion
-          ? reportObj.conclusion.length
-          : 0,
-        referencesCount: reportObj.references ? reportObj.references.length : 0,
-      });
+      // 将新内容追加到现有流内容
+      const newContent = `${state.streamingContent || ""}${content}`;
+      console.log(`更新后流内容长度: ${newContent.length}字符`);
 
+      // 如果是最后一个块或非分块内容，尝试构建完整的报告对象
+      if (!isChunk || chunkIndex === totalChunks - 1) {
+        console.log("构建完整报告对象");
+        const reportObj = createReportFromMarkdown(state.topic, newContent);
+        console.log("从Markdown构建的报告对象:", {
+          title: reportObj.title,
+          introLength: reportObj.introduction
+            ? reportObj.introduction.length
+            : 0,
+          sectionsCount: reportObj.sections ? reportObj.sections.length : 0,
+          conclusionLength: reportObj.conclusion
+            ? reportObj.conclusion.length
+            : 0,
+          referencesCount: reportObj.references
+            ? reportObj.references.length
+            : 0,
+        });
+
+        return {
+          streamingContent: newContent,
+          report: reportObj,
+        };
+      }
+
+      // 如果只是中间分块，只更新streamingContent
       return {
         streamingContent: newContent,
-        report: reportObj,
       };
     });
   },

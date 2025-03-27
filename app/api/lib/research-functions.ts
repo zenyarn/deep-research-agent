@@ -253,7 +253,7 @@ export async function extractInformation(
   const modelParams = getModelParams(model);
 
   // 截取限制
-  const MAX_TEXT_LENGTH = 8000; // 限制每个结果文本长度
+  const MAX_TEXT_LENGTH = 20000; // 增加每个结果文本长度限制
   const MAX_RESULTS = 5; // 限制处理的结果数量
 
   // 准备搜索结果文本，限制结果数量和每个结果的文本长度

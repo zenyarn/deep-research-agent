@@ -98,7 +98,7 @@ async function generateQuestions(topic: string): Promise<string[]> {
           "X-Title": "Deep Research AI Agent",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.0-flash-lite-preview-02-05:free",
+          model: "google/gemini-2.0-flash-lite-001",
           messages: [
             {
               role: "user",

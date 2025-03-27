@@ -28,7 +28,7 @@ export async function generateQuestions(topic: string): Promise<string[]> {
 
   try {
     const { object } = await generateObject({
-      model: openrouter("google/gemini-2.0-flash-lite-preview-02-05:free"),
+      model: openrouter("google/gemini-2.0-flash-lite-001"),
       prompt,
       schema: z.object({
         questions: z.array(z.string()).describe("Generated research questions"),

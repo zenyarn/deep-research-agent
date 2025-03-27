@@ -4,15 +4,15 @@ export const RETRY_DELAY_MS = 1000;
 
 // 搜索配置
 export const MAX_SEARCH_RESULTS = 5;
-export const MAX_CONTENT_CHARS = 10000;
+export const MAX_CONTENT_CHARS = 30000;
 export const MAX_ITERATIONS = 3;
 
 // 模型配置
 export const MODELS = {
-  PLANNING: "google/gemini-2.0-flash-lite-preview-02-05:free",
-  EXTRACTION: "google/gemini-2.0-flash-lite-preview-02-05:free",
-  ANALYSIS: "google/gemini-2.0-flash-lite-preview-02-05:free",
-  REPORT: "google/gemini-2.0-flash-lite-preview-02-05:free",
+  PLANNING: "google/gemini-2.0-flash-lite-001",
+  EXTRACTION: "google/gemini-2.0-flash-lite-001",
+  ANALYSIS: "google/gemini-2.0-flash-lite-001",
+  REPORT: "google/gemini-2.0-flash-lite-001",
 } as const;
 
 // 系统提示词

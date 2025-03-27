@@ -264,9 +264,9 @@ export function ResearchReport() {
 
         {hasContent ? (
           <div className="bg-gray-700/10 p-8 rounded-xl">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <MarkdownRenderer>
               {markdownContent || streamingContent}
-            </ReactMarkdown>
+            </MarkdownRenderer>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center p-10">
@@ -337,7 +337,7 @@ function formatDate(date: Date | string | undefined): string {
 // Markdown渲染组件
 function MarkdownRenderer({ children }: { children: string }) {
   return (
-    <div className="text-left">
+    <article className="prose prose-invert prose-headings:text-white prose-a:text-blue-400 prose-strong:text-white prose-code:bg-gray-800 prose-code:text-gray-200 prose-pre:bg-gray-800 prose-pre:text-gray-200 prose-blockquote:text-gray-300 prose-blockquote:border-gray-600 max-w-none">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -356,48 +356,98 @@ function MarkdownRenderer({ children }: { children: string }) {
             ) : (
               <code
                 {...props}
-                className={`${className} px-1 py-0.5 rounded-md bg-gray-700 text-gray-200`}
+                className={`${
+                  className || ""
+                } px-1 py-0.5 rounded-md bg-gray-800 text-gray-200`}
               >
                 {children}
               </code>
             );
           },
+          h1({ node, className, ...props }: any) {
+            return (
+              <h1
+                {...props}
+                className="text-2xl font-bold mb-4 mt-6 text-white"
+              />
+            );
+          },
+          h2({ node, className, ...props }: any) {
+            return (
+              <h2
+                {...props}
+                className="text-xl font-semibold mb-3 mt-5 text-white"
+              />
+            );
+          },
+          h3({ node, className, ...props }: any) {
+            return (
+              <h3
+                {...props}
+                className="text-lg font-semibold mb-2 mt-4 text-white"
+              />
+            );
+          },
+          p({ node, className, ...props }: any) {
+            return <p {...props} className="mb-4 text-slate-100" />;
+          },
           // 自定义表格样式
           table({ node, ...props }: any) {
             return (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto mb-4">
                 <table
                   {...props}
-                  className="min-w-full divide-y divide-slate-200 dark:divide-slate-700"
+                  className="min-w-full divide-y divide-slate-600"
                 />
               </div>
             );
           },
           tr({ node, ...props }: any) {
-            return (
-              <tr
-                {...props}
-                className="even:bg-slate-50 dark:even:bg-slate-800/50"
-              />
-            );
+            return <tr {...props} className="even:bg-slate-800/50" />;
           },
           th({ node, ...props }: any) {
             return (
               <th
                 {...props}
-                className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+                className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider"
               />
             );
           },
           td({ node, ...props }: any) {
-            return <td {...props} className="px-4 py-2" />;
+            return <td {...props} className="px-4 py-2 text-slate-200" />;
           },
           // 自定义引用样式
           blockquote({ node, ...props }: any) {
             return (
               <blockquote
                 {...props}
-                className="pl-4 border-l-4 border-slate-300 dark:border-slate-700 italic text-slate-700 dark:text-slate-300"
+                className="pl-4 border-l-4 border-slate-600 italic text-slate-300 my-4"
+              />
+            );
+          },
+          ul({ node, ...props }: any) {
+            return (
+              <ul {...props} className="list-disc pl-6 mb-4 text-slate-100" />
+            );
+          },
+          ol({ node, ...props }: any) {
+            return (
+              <ol
+                {...props}
+                className="list-decimal pl-6 mb-4 text-slate-100"
+              />
+            );
+          },
+          li({ node, ...props }: any) {
+            return <li {...props} className="mb-1 text-slate-100" />;
+          },
+          a({ node, ...props }: any) {
+            return (
+              <a
+                {...props}
+                className="text-blue-400 hover:text-blue-300 hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
               />
             );
           },
@@ -405,6 +455,6 @@ function MarkdownRenderer({ children }: { children: string }) {
       >
         {children}
       </ReactMarkdown>
-    </div>
+    </article>
   );
 }

@@ -61,6 +61,70 @@ module.exports = {
           foreground: "hsl(var(--card-foreground))",
         },
       },
+      typography: {
+        DEFAULT: {
+          css: {
+            color: "#f8fafc", // slate-100 for dark mode
+            a: {
+              color: "#60a5fa", // blue-400
+              "&:hover": {
+                color: "#93c5fd", // blue-300
+              },
+            },
+            h1: {
+              color: "#ffffff",
+              fontWeight: "700",
+            },
+            h2: {
+              color: "#ffffff",
+              fontWeight: "600",
+            },
+            h3: {
+              color: "#ffffff",
+              fontWeight: "600",
+            },
+            h4: {
+              color: "#ffffff",
+              fontWeight: "600",
+            },
+            code: {
+              color: "#e2e8f0", // slate-200
+              backgroundColor: "#334155", // slate-700
+              padding: "0.25rem",
+              borderRadius: "0.25rem",
+              fontWeight: "400",
+            },
+            "code::before": {
+              content: '""',
+            },
+            "code::after": {
+              content: '""',
+            },
+            blockquote: {
+              color: "#cbd5e1", // slate-300
+              borderLeftColor: "#475569", // slate-600
+            },
+            strong: {
+              color: "#f1f5f9", // slate-50
+              fontWeight: "600",
+            },
+            pre: {
+              backgroundColor: "#1e293b", // slate-800
+              color: "#e2e8f0", // slate-200
+              padding: "1rem",
+            },
+            ul: {
+              color: "#f8fafc", // slate-100
+            },
+            ol: {
+              color: "#f8fafc", // slate-100
+            },
+            li: {
+              color: "#f8fafc", // slate-100
+            },
+          },
+        },
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
@@ -92,5 +156,5 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
 };

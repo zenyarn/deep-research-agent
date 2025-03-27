@@ -9,6 +9,7 @@ import {
 } from "../lib/activity-tracker";
 import { PLANNING_SYSTEM_PROMPT } from "../lib/prompts";
 import { conductResearch } from "../lib/research-functions";
+import { ReportPayload } from "../../../lib/types";
 
 // 定义事件类型
 type EventType = "activity" | "source" | "report" | "complete" | "error";
@@ -17,6 +18,12 @@ type EventType = "activity" | "source" | "report" | "complete" | "error";
 interface StreamEvent {
   type: EventType;
   payload: any;
+}
+
+// 报告事件接口
+interface ReportEvent extends StreamEvent {
+  type: "report";
+  payload: ReportPayload;
 }
 
 // 请求体验证模式
@@ -148,12 +155,43 @@ class ActivityTracker implements ActivityTrackerInterface {
     // 存储报告内容
     this.reportContent += content;
 
-    // 发送报告更新事件
-    const event: StreamEvent = {
-      type: "report",
-      payload: { content },
-    };
-    this.stream.write(JSON.stringify(event));
+    // 检查内容大小，如果太大可能需要分块发送
+    const MAX_CHUNK_SIZE = 10000; // 每个块的最大大小
+
+    if (content.length > MAX_CHUNK_SIZE) {
+      console.log(`报告内容较大(${content.length}字符)，分块发送`);
+
+      // 将内容分块，每块不超过MAX_CHUNK_SIZE
+      let offset = 0;
+      while (offset < content.length) {
+        const chunk = content.substring(offset, offset + MAX_CHUNK_SIZE);
+
+        // 发送分块报告更新事件
+        const chunkEvent: StreamEvent = {
+          type: "report",
+          payload: {
+            content: chunk,
+            isChunk: true,
+            chunkIndex: Math.floor(offset / MAX_CHUNK_SIZE),
+            totalChunks: Math.ceil(content.length / MAX_CHUNK_SIZE),
+          },
+        };
+        this.stream.write(JSON.stringify(chunkEvent));
+
+        offset += MAX_CHUNK_SIZE;
+      }
+
+      console.log(
+        `报告内容已分${Math.ceil(content.length / MAX_CHUNK_SIZE)}块发送`
+      );
+    } else {
+      // 对于较小的内容，直接发送
+      const event: StreamEvent = {
+        type: "report",
+        payload: { content },
+      };
+      this.stream.write(JSON.stringify(event));
+    }
   }
 
   // 修改完成事件发送，包含完整报告

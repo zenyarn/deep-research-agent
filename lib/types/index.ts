@@ -63,6 +63,16 @@ export interface ResearchFinding {
 }
 
 /**
+ * 报告流事件负载接口 - 用于处理分块报告内容
+ */
+export interface ReportPayload {
+  content: string;
+  isChunk?: boolean;
+  chunkIndex?: number;
+  totalChunks?: number;
+}
+
+/**
  * 研究报告部分接口 - 表示研究报告的一个部分
  */
 export interface ReportSection {
