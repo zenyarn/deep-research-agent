@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Deep Research AI Agent (复现项目)
 
-## Getting Started
+## 项目背景
 
-First, run the development server:
+本项目是对 [codebucks27/Deep-Research-AI-Agent](https://github.com/codebucks27/Deep-Research-AI-Agent) 的复现。
+
+复现的核心思路是：
+
+1.  **AI 生成复现文档**：首先，我们利用 AI 的能力，分析原始项目并生成一套详细的中文复现步骤文档。这些文档保存在本项目的 `docs` 目录下，作为整个复现工作的蓝图和指南。
+2.  **AI 遵循文档复现**：随后，我们再次借助 AI，在一个新的工作目录中，让其严格遵循 `docs` 目录下的文档，一步一步地搭建和实现整个项目的功能。
+
+## 提示词记录
+
+```text
+迅速熟悉整个项目
+```
+
+```markdown
+我希望通过提示词让 LLM 一步一步复现整个项目，请帮我进行任务拆解，并撰写每一步复现项目的提示词。
+
+要求如下：
+
+- **文档位置**：将复现过程的文档写在 docs 目录 中（如果 docs 文件夹不存在，自行创建"docs"文件夹，然后在该文件夹中创建多个 md 文档来给出复现的详细步骤）
+- **不要给出代码**：请不要在复现文档中给出任何示例代码，无论是项目实现代码还是单元测试代码
+- **始终给出测试方式**：尽可能在各个任务中持续给出可靠的测试方法，从而确保项目有效推进并降低出错的可能性。
+  - 对于你拆解出的每一个细分任务，都应当考虑完成任务后应该如何正确测试任务完成的效果，
+  - 如果该任务可以进行单元测试的话，请考虑该如何具体进行该单元测试，把撰写单元测试来测试代码也作为任务规划的一部分，写入到文档中（注意，请不要给出单元测试的具体代码，仅仅在文档中给出“准备创建一个 xxx 文件，并在该文件中进行 xxx 的单元测试”即可）
+  - 如果该任务有别的合适的测试方法（例如可以用 postman 或 curl 命令测试 API 是否被正确实现），同样也应将该测试方式写入文档。
+- **语言**：请始终用中文给出复现文档
+```
+
+```text
+从下一个文档开始，请一次把所有文档创建好，
+不要在创建一个文档后就停止创建后面的文档
+```
+
+```text
+我准备实现一个DeepSearch AI Agent项目，项目的具体细节和详细的实现步骤都被我写在了 @docs 目录中，请读取docs目录中的文档，指导我一步一步完成整个项目。
+
+你不必一次便完成整个项目的开发，而应该严格按照文档一步一步进行开发，每次只执行文档中的一个具体步骤，在执行完成后请给出测试该步骤完成效果的建议，并等待我完成该步骤的效果测试。
+
+目前，我已经通过执行 `npx create-next-app@latest deep-research-ai-agent --typescript --tailwind --app --no-src-dir` 完成了项目的基础创建工作，因此，你不必再从头创建项目
+```
+
+## 快速开始
+
+首先，安装依赖：
+
+```bash
+npm install
+# 或者
+yarn install
+# 或者
+pnpm install
+```
+
+然后，请自行配置环境变量 `OPENAI_API_KEY` 和 `EXA_SEARCH_API_KEY`，并将其添加到 `.env` 文件中。
+
+最后，运行开发服务器：
 
 ```bash
 npm run dev
-# or
+# 或者
 yarn dev
-# or
+# 或者
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+在您的浏览器中打开 [http://localhost:3000](http://localhost:3000) 查看结果。
